@@ -1027,6 +1027,18 @@ azmcp sql db list --subscription <subscription> \
                   --resource-group <resource-group> \
                   --server <server-name>
 
+# Restore an Azure SQL database from a point-in-time backup
+azmcp sql db restore --subscription <subscription> \
+                     --resource-group <resource-group> \
+                     --server <target-server-name> \
+                     --database <target-database-name> \
+                     --source-database <source-database-name> \
+                     --restore-point-in-time <ISO-8601-UTC> \
+                     [--source-server <source-server-name>] \
+                     [--source-resource-group <source-resource-group>] \
+                     [--source-subscription <source-subscription>] \
+                     [--elastic-pool-name <elastic-pool-name>]
+
 # Show details of a specific SQL database
 azmcp sql db show --subscription <subscription> \
                   --resource-group <resource-group> \
@@ -1046,6 +1058,7 @@ azmcp sql db update --subscription <subscription> \
                     [--elastic-pool-name <elastic-pool-name>] \
                     [--zone-redundant <true/false>] \
                     [--read-scale <Enabled|Disabled>]
+
 ```
 
 #### Elastic Pool

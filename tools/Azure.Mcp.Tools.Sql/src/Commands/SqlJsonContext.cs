@@ -15,6 +15,7 @@ namespace Azure.Mcp.Tools.Sql.Commands;
 [JsonSerializable(typeof(DatabaseShowCommand.DatabaseShowResult))]
 [JsonSerializable(typeof(DatabaseListCommand.DatabaseListResult))]
 [JsonSerializable(typeof(DatabaseCreateCommand.DatabaseCreateResult))]
+[JsonSerializable(typeof(DatabaseRestoreCommand.DatabaseRestoreResult))]
 [JsonSerializable(typeof(DatabaseUpdateCommand.DatabaseUpdateResult))]
 [JsonSerializable(typeof(DatabaseDeleteCommand.DatabaseDeleteResult))]
 [JsonSerializable(typeof(EntraAdminListCommand.EntraAdminListResult))]

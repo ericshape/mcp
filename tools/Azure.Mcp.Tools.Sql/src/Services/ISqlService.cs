@@ -96,6 +96,36 @@ public interface ISqlService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Restores a SQL database from a point-in-time backup.
+    /// </summary>
+    /// <param name="targetServerName">The name of the target SQL server</param>
+    /// <param name="targetDatabaseName">The name of the database to create as part of the restore</param>
+    /// <param name="targetResourceGroup">The resource group name for the target server</param>
+    /// <param name="targetSubscription">The subscription ID or name for the target server</param>
+    /// <param name="sourceServerName">The name of the source SQL server</param>
+    /// <param name="sourceDatabaseName">The name of the source database to restore from</param>
+    /// <param name="sourceResourceGroup">The resource group name of the source server</param>
+    /// <param name="sourceSubscription">The subscription ID or name of the source server</param>
+    /// <param name="restorePointInTime">The point in time to restore to (UTC)</param>
+    /// <param name="elasticPoolName">Optional elastic pool to assign the restored database to</param>
+    /// <param name="retryPolicy">Optional retry policy options</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The restored SQL database information</returns>
+    Task<SqlDatabase> RestoreDatabaseAsync(
+        string targetServerName,
+        string targetDatabaseName,
+        string targetResourceGroup,
+        string targetSubscription,
+        string sourceServerName,
+        string sourceDatabaseName,
+        string sourceResourceGroup,
+        string sourceSubscription,
+        DateTimeOffset restorePointInTime,
+        string? elasticPoolName,
+        RetryPolicyOptions? retryPolicy = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a list of databases for a SQL server.
     /// </summary>
     /// <param name="serverName">The name of the SQL server</param>

@@ -6,6 +6,8 @@ The Azure MCP Server updates automatically by default whenever a new release com
 
 ### Features Added
 
+- Added support for restoring Azure SQL databases via the command `azmcp_sql_db_restore`.
+
 ### Breaking Changes
 
 - Removed the following Storage tools:

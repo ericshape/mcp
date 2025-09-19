@@ -290,6 +290,96 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
     }
 
     /// <summary>
+    /// Restores a SQL database from a point-in-time backup.
+    /// </summary>
+    /// <param name="targetServerName">The name of the SQL server to restore into</param>
+    /// <param name="targetDatabaseName">The name of the database to create as part of the restore</param>
+    /// <param name="targetResourceGroup">The resource group containing the target server</param>
+    /// <param name="targetSubscription">The subscription ID or name of the target server</param>
+    /// <param name="sourceServerName">The name of the source SQL server</param>
+    /// <param name="sourceDatabaseName">The name of the source database to restore from</param>
+    /// <param name="sourceResourceGroup">The resource group containing the source server</param>
+    /// <param name="sourceSubscription">The subscription ID or name containing the source server</param>
+    /// <param name="restorePointInTime">The point in time to restore to (UTC)</param>
+    /// <param name="elasticPoolName">Optional elastic pool to assign the restored database to</param>
+    /// <param name="retryPolicy">Optional retry policy configuration for resilient operations</param>
+    /// <param name="cancellationToken">Token to observe for cancellation requests</param>
+    /// <returns>The restored SQL database</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are null or empty</exception>
+    public async Task<SqlDatabase> RestoreDatabaseAsync(
+        string targetServerName,
+        string targetDatabaseName,
+        string targetResourceGroup,
+        string targetSubscription,
+        string sourceServerName,
+        string sourceDatabaseName,
+        string sourceResourceGroup,
+        string sourceSubscription,
+        DateTimeOffset restorePointInTime,
+        string? elasticPoolName,
+        RetryPolicyOptions? retryPolicy = null,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRequiredParameters(
+            targetServerName,
+            targetDatabaseName,
+            targetResourceGroup,
+            targetSubscription,
+            sourceServerName,
+            sourceDatabaseName,
+            sourceResourceGroup,
+            sourceSubscription);
+
+        try
+        {
+            var armClient = await CreateArmClientAsync(null, retryPolicy);
+
+            var targetSubscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(targetSubscription));
+            var targetResourceGroupResource = await targetSubscriptionResource.GetResourceGroupAsync(targetResourceGroup);
+            var targetSqlServerResource = await targetResourceGroupResource.Value.GetSqlServers().GetAsync(targetServerName);
+
+            var sourceSubscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(sourceSubscription));
+            var sourceResourceGroupResource = await sourceSubscriptionResource.GetResourceGroupAsync(sourceResourceGroup);
+            var sourceSqlServerResource = await sourceResourceGroupResource.Value.GetSqlServers().GetAsync(sourceServerName);
+            var sourceDatabaseResource = await sourceSqlServerResource.Value.GetSqlDatabases().GetAsync(sourceDatabaseName);
+
+            var databaseData = new ResourceManager.Sql.SqlDatabaseData(targetSqlServerResource.Value.Data.Location)
+            {
+                CreateMode = SqlDatabaseCreateMode.PointInTimeRestore,
+                SourceDatabaseId = sourceDatabaseResource.Value.Id,
+                RestorePointInTime = restorePointInTime
+            };
+
+            if (!string.IsNullOrEmpty(elasticPoolName))
+            {
+                databaseData.ElasticPoolId = Azure.Core.ResourceIdentifier.Parse(
+                    $"{targetSqlServerResource.Value.Id}/elasticPools/{elasticPoolName}");
+            }
+
+            var operation = await targetSqlServerResource.Value.GetSqlDatabases().CreateOrUpdateAsync(
+                Azure.WaitUntil.Completed,
+                targetDatabaseName,
+                databaseData,
+                cancellationToken);
+
+            var restoredDatabase = operation.Value;
+
+            _logger.LogInformation(
+                "Successfully restored SQL database. TargetServer: {TargetServer}, TargetDatabase: {TargetDatabase}, SourceDatabase: {SourceDatabase}, RestorePoint: {RestorePoint}",
+                targetServerName, targetDatabaseName, sourceDatabaseName, restorePointInTime);
+
+            return ConvertToSqlDatabaseModel(restoredDatabase);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error restoring SQL database. TargetServer: {TargetServer}, TargetDatabase: {TargetDatabase}, SourceServer: {SourceServer}, SourceDatabase: {SourceDatabase}",
+                targetServerName, targetDatabaseName, sourceServerName, sourceDatabaseName);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Retrieves a list of all SQL databases from an Azure SQL Server.
     /// </summary>
     /// <param name="serverName">The name of the SQL server to list databases from</param>

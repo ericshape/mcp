@@ -24,6 +24,11 @@ public static class SqlOptionDefinitions
     public const string ElasticPoolName = "elastic-pool-name";
     public const string ZoneRedundant = "zone-redundant";
     public const string ReadScale = "read-scale";
+    public const string SourceServerName = "source-server";
+    public const string SourceDatabaseName = "source-database";
+    public const string SourceResourceGroupName = "source-resource-group";
+    public const string SourceSubscription = "source-subscription";
+    public const string RestorePointInTime = "restore-point-in-time";
 
     public static readonly Option<string> Server = new(
         $"--{ServerName}"
@@ -175,5 +180,45 @@ public static class SqlOptionDefinitions
     {
         Description = "Read scale option for the database (Enabled or Disabled).",
         Required = false
+    };
+
+    public static readonly Option<string> SourceServerOption = new(
+        $"--{SourceServerName}"
+    )
+    {
+        Description = "The source Azure SQL Server name to restore from. Defaults to the target server when not specified.",
+        Required = false
+    };
+
+    public static readonly Option<string> SourceDatabaseOption = new(
+        $"--{SourceDatabaseName}"
+    )
+    {
+        Description = "The source Azure SQL Database name to restore from.",
+        Required = true
+    };
+
+    public static readonly Option<string> SourceResourceGroupOption = new(
+        $"--{SourceResourceGroupName}"
+    )
+    {
+        Description = "The resource group of the source SQL server. Defaults to the target resource group when not specified.",
+        Required = false
+    };
+
+    public static readonly Option<string> SourceSubscriptionOption = new(
+        $"--{SourceSubscription}"
+    )
+    {
+        Description = "The subscription ID or name of the source SQL server. Defaults to the target subscription when not specified.",
+        Required = false
+    };
+
+    public static readonly Option<DateTimeOffset> RestorePointInTimeOption = new(
+        $"--{RestorePointInTime}"
+    )
+    {
+        Description = "The point in time (UTC) to restore the database to, formatted as an ISO 8601 timestamp.",
+        Required = true
     };
 }
