@@ -8,6 +8,8 @@ using Azure.Mcp.Core.Services.Azure.Subscription;
 using Azure.Mcp.Core.Services.Azure.Tenant;
 using Azure.Mcp.Tools.Sql.Models;
 using Azure.Mcp.Tools.Sql.Services.Models;
+using Azure.ResourceManager;
+using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Sql;
 using Azure.ResourceManager.Sql.Models;
 using Microsoft.Extensions.Logging;
@@ -17,6 +19,7 @@ namespace Azure.Mcp.Tools.Sql.Services;
 public class SqlService(ISubscriptionService subscriptionService, ITenantService tenantService, ILogger<SqlService> logger) : BaseAzureResourceService(subscriptionService, tenantService), ISqlService
 {
     private readonly ILogger<SqlService> _logger = logger;
+    private readonly ISubscriptionService _subscriptionService = subscriptionService;
 
     /// <summary>
     /// Retrieves a specific SQL database from an Azure SQL Server.
@@ -106,7 +109,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for create operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
             var sqlServerResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
 
@@ -219,7 +222,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         try
         {
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
             var sqlServerResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
 
@@ -468,7 +471,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for create operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
             var sqlServerResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
 
@@ -528,7 +531,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for delete operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
             var sqlServerResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
 
@@ -593,7 +596,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for create operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
 
             var serverData = new SqlServerData(location)
@@ -667,7 +670,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for get operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
 
             var serverResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
@@ -713,7 +716,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for delete operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
 
             var serverResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
@@ -765,7 +768,7 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
         {
             // Use ARM client directly for delete operations
             var armClient = await CreateArmClientAsync(null, retryPolicy);
-            var subscriptionResource = armClient.GetSubscriptionResource(Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscription));
+            var subscriptionResource = await GetSubscriptionResourceAsync(armClient, subscription, retryPolicy, cancellationToken);
             var resourceGroupResource = await subscriptionResource.GetResourceGroupAsync(resourceGroup);
             var sqlServerResource = await resourceGroupResource.Value.GetSqlServers().GetAsync(serverName);
 
@@ -795,6 +798,29 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
                 serverName, databaseName, resourceGroup, subscription);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Helper method to get a SubscriptionResource by resolving subscription names to GUIDs.
+    /// This ensures compatibility with both subscription IDs and display names.
+    /// </summary>
+    /// <param name="armClient">The ARM client to use</param>
+    /// <param name="subscription">The subscription ID or name</param>
+    /// <param name="retryPolicy">Optional retry policy configuration</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The resolved SubscriptionResource</returns>
+    private async Task<SubscriptionResource> GetSubscriptionResourceAsync(
+        ArmClient armClient,
+        string subscription,
+        RetryPolicyOptions? retryPolicy,
+        CancellationToken cancellationToken = default)
+    {
+        // Use the subscription service to resolve subscription names to GUIDs
+        var subscriptionResource = await _subscriptionService.GetSubscription(subscription, null, retryPolicy);
+        
+        // Now create the ARM client subscription resource using the resolved GUID
+        return armClient.GetSubscriptionResource(
+            Azure.ResourceManager.Resources.SubscriptionResource.CreateResourceIdentifier(subscriptionResource.Data.SubscriptionId));
     }
 
     private static SqlDatabase ConvertToSqlDatabaseModel(SqlDatabaseResource databaseResource)
