@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine.Parsing;
+using System.Net;
 using Azure.Mcp.Core.Commands;
 using Azure.Mcp.Core.Extensions;
 using Azure.Mcp.Tools.Sql.Models;
@@ -77,7 +78,7 @@ public sealed class DatabaseRestoreCommand(ILogger<DatabaseRestoreCommand> logge
             validation.ErrorMessage = message;
             if (commandResponse != null)
             {
-                commandResponse.Status = 400;
+                commandResponse.Status = HttpStatusCode.BadRequest;
                 commandResponse.Message = message;
             }
         }

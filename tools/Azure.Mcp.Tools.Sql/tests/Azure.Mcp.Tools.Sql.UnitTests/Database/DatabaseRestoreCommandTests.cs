@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
+using System.Net;
 using Azure.Mcp.Core.Models.Command;
 using Azure.Mcp.Core.Options;
 using Azure.Mcp.Tools.Sql.Commands.Database;
@@ -97,7 +98,7 @@ public class DatabaseRestoreCommandTests
 
         var response = await _command.ExecuteAsync(_context, args);
 
-        Assert.Equal(200, response.Status);
+        Assert.Equal(HttpStatusCode.OK, response.Status);
         Assert.Equal("Success", response.Message);
         await _sqlService.Received(1).RestoreDatabaseAsync(
             "targetServer",
@@ -190,7 +191,7 @@ public class DatabaseRestoreCommandTests
 
         var response = await _command.ExecuteAsync(_context, args);
 
-        Assert.Equal(400, response.Status);
+        Assert.Equal(HttpStatusCode.BadRequest, response.Status);
         Assert.Contains("cannot be in the future", response.Message);
         Assert.Empty(_sqlService.ReceivedCalls());
     }
@@ -225,7 +226,7 @@ public class DatabaseRestoreCommandTests
 
         var response = await _command.ExecuteAsync(_context, args);
 
-        Assert.Equal(500, response.Status);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.Status);
         Assert.Contains("restore failed", response.Message);
         Assert.Contains("troubleshooting", response.Message);
     }
@@ -261,7 +262,7 @@ public class DatabaseRestoreCommandTests
 
         var response = await _command.ExecuteAsync(_context, args);
 
-        Assert.Equal(409, response.Status);
+        Assert.Equal(HttpStatusCode.Conflict, response.Status);
         Assert.Contains("target name already exists", response.Message);
     }
 }
