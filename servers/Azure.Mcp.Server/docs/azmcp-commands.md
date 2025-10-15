@@ -1727,6 +1727,17 @@ azmcp sql db update --subscription <subscription> \
                     [--read-scale <Enabled|Disabled>]
 ```
 
+#### Transparent Data Encryption (TDE)
+
+```bash
+# Show Transparent Data Encryption (TDE) status for a SQL database
+# ❌ Destructive | ✅ Idempotent | ❌ OpenWorld | ✅ ReadOnly | ❌ Secret | ❌ LocalRequired
+azmcp sql db tde show --subscription <subscription> \
+                      --resource-group <resource-group> \
+                      --server <server-name> \
+                      --database <database-name>
+```
+
 #### Elastic Pool
 
 ```bash
