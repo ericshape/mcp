@@ -27,6 +27,7 @@ public class SqlSetup : IAreaSetup
         services.AddSingleton<DatabaseRenameCommand>();
         services.AddSingleton<DatabaseUpdateCommand>();
         services.AddSingleton<DatabaseDeleteCommand>();
+        services.AddSingleton<DatabaseTdeShowCommand>();
 
         services.AddSingleton<ServerCreateCommand>();
         services.AddSingleton<ServerDeleteCommand>();
@@ -62,6 +63,12 @@ public class SqlSetup : IAreaSetup
         database.AddCommand(databaseUpdate.Name, databaseUpdate);
         var databaseDelete = serviceProvider.GetRequiredService<DatabaseDeleteCommand>();
         database.AddCommand(databaseDelete.Name, databaseDelete);
+
+        var tde = new CommandGroup("tde", "SQL database Transparent Data Encryption (TDE) operations");
+        database.AddSubGroup(tde);
+
+        var tdeShow = serviceProvider.GetRequiredService<DatabaseTdeShowCommand>();
+        tde.AddCommand(tdeShow.Name, tdeShow);
 
         var server = new CommandGroup("server", "SQL server operations");
         sql.AddSubGroup(server);

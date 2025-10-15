@@ -1173,4 +1173,78 @@ public class SqlService(ISubscriptionService subscriptionService, ITenantService
 
         return result;
     }
+
+    private static SqlTransparentDataEncryption ConvertToSqlTransparentDataEncryptionModel(JsonElement item)
+    {
+        var nameValue = item.GetProperty("name").GetString() ?? "Unknown";
+        var idValue = item.GetProperty("id").GetString() ?? "Unknown";
+        var typeValue = item.GetProperty("type").GetString() ?? "Unknown";
+        var statusValue = "Unknown";
+        string? locationValue = null;
+
+        if (item.TryGetProperty("properties", out var properties))
+        {
+            if (properties.TryGetProperty("state", out var state))
+            {
+                statusValue = state.GetString() ?? "Unknown";
+            }
+        }
+
+        if (item.TryGetProperty("location", out var location))
+        {
+            locationValue = location.GetString();
+        }
+
+        return new SqlTransparentDataEncryption(
+            Name: nameValue,
+            Id: idValue,
+            Type: typeValue,
+            Status: statusValue,
+            Location: locationValue);
+    }
+
+    /// <summary>
+    /// Retrieves the Transparent Data Encryption (TDE) configuration for an Azure SQL Database.
+    /// TDE provides encryption-at-rest to protect data and log files.
+    /// </summary>
+    /// <param name="serverName">The name of the SQL server hosting the database</param>
+    /// <param name="databaseName">The name of the database to get TDE configuration for</param>
+    /// <param name="resourceGroup">The name of the resource group containing the server</param>
+    /// <param name="subscription">The subscription ID or name</param>
+    /// <param name="retryPolicy">Optional retry policy configuration for resilient operations</param>
+    /// <param name="cancellationToken">Token to observe for cancellation requests</param>
+    /// <returns>The SQL database transparent data encryption configuration</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are null or empty</exception>
+    public async Task<SqlTransparentDataEncryption> GetDatabaseTransparentDataEncryptionAsync(
+        string serverName,
+        string databaseName,
+        string resourceGroup,
+        string subscription,
+        RetryPolicyOptions? retryPolicy,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRequiredParameters(
+            (nameof(serverName), serverName),
+            (nameof(databaseName), databaseName),
+            (nameof(resourceGroup), resourceGroup),
+            (nameof(subscription), subscription)
+        );
+
+        // Use Resource Graph to query TDE configuration
+        var result = await ExecuteSingleResourceQueryAsync(
+            "Microsoft.Sql/servers/databases/transparentDataEncryption",
+            resourceGroup: resourceGroup,
+            subscription: subscription,
+            retryPolicy: retryPolicy,
+            converter: ConvertToSqlTransparentDataEncryptionModel,
+            additionalFilter: $"name =~ '{EscapeKqlString(serverName)}/{EscapeKqlString(databaseName)}/current'",
+            cancellationToken: cancellationToken);
+
+        if (result == null)
+        {
+            throw new KeyNotFoundException($"TDE configuration not found for database '{databaseName}' on SQL server '{serverName}' in resource group '{resourceGroup}'.");
+        }
+
+        return result;
+    }
 }
